@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "brianbig";
+option java_outer_classname = "Rainstream_java";
+option objc_class_prefix = "HLW";
+
+package brianbig;
+
+service Rainstream_javaService {
+  rpc send (Rainstream_javaRequest) returns (Rainstream_javaReply) {}
+}
+
+message Rainstream_javaRequest {
+  string name = 1;
+}
+
+message Rainstream_javaReply {
+  string message = 1;
+}
