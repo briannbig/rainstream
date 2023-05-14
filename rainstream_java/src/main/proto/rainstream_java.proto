@@ -1,20 +1,21 @@
 syntax = "proto3";
 
-option java_multiple_files = true;
-option java_package = "brianbig";
-option java_outer_classname = "Rainstream_java";
+option java_multiple_files = false;
+option java_package = "brianbig.gen";
+option java_outer_classname = "WeatherStream";
 option objc_class_prefix = "HLW";
 
 package brianbig;
 
-service Rainstream_javaService {
-  rpc send (Rainstream_javaRequest) returns (Rainstream_javaReply) {}
+service WeatherStreamService {
+  rpc getInfoOnce (WeatherRequest) returns (WeatherResponse) {}
+  rpc getInfoContinuously (WeatherRequest) returns (stream WeatherResponse) {}
 }
 
-message Rainstream_javaRequest {
-  string name = 1;
+message WeatherRequest {
+  int32 streamLimit = 1;
 }
-
-message Rainstream_javaReply {
-  string message = 1;
+message WeatherResponse {
+  string city = 1;
+  string info = 2;
 }
