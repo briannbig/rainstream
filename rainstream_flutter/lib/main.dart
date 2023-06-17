@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:grpc/grpc.dart' as grpc;
+import 'package:rainstream_flutter/api/api.dart';
+import 'package:rainstream_flutter/protos/generated/rainstream.pb.dart';
+
+import 'ui/weather_info_table.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,39 +34,71 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  bool _stream = false;
+  final List<WeatherResponse> weatherResponseList = List.empty(growable: true);
+  final Api _api = Api();
 
   void _incrementCounter() {
     setState(() {
-      _counter++;
+      _stream == false ? _stream = true : _stream = false;
     });
+  }
+
+  void fetchOnce(int streams) {
+    _api
+        .getInfoOnce()
+        .then((value) => value.then((p0) => weatherResponseList.add(p0)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(
+            _stream ? 'Streaming weather info' : 'Not streaming currently'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      body: _stream
+          ? StreamBuilder<grpc.ResponseStream<WeatherResponse>>(
+              stream: Stream.fromFuture(_api.getInfoContinously(60)),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('an error occured! ${snapshot.error}'),
+                  );
+                } else if (!snapshot.hasData) {
+                  return const Center(
+                    child: Text('No data available'),
+                  );
+                } else {
+                  final data = snapshot.data;
+                  return WeatherInfoTable(list: feedDataToList(data));
+                }
+              })
+          : WeatherInfoTable(list: weatherResponseList),
+      floatingActionButton: ButtonBar(
+        children: [
+          FloatingActionButton(
+              onPressed: _incrementCounter,
+              tooltip:
+                  _stream ? 'Get info once' : 'Start streaming weather info',
+              child: _stream == false
+                  ? const Icon(Icons.thunderstorm_outlined)
+                  : const Icon(Icons.thunderstorm_rounded)),
+        ],
       ),
     );
+  }
+
+  List<WeatherResponse> feedDataToList(
+      grpc.ResponseStream<WeatherResponse>? data) {
+    List<WeatherResponse> listData = List.empty(growable: true);
+    data?.toList().then((value) => value.forEach((element) {
+          listData.add(element);
+        }));
+    return listData;
   }
 }
